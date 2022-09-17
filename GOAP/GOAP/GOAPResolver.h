@@ -9,38 +9,36 @@ class Precondition;
 
 struct Node {
 	const Action* sAction;
-	const Precondition* sPrecondition;
-	const unsigned int sCoast;
-	const unsigned int sCitizenNeededForAction;
+	int sCitizenNeededForAction;
+	unsigned int sCoast;
 
-	Node(const Action* action, const Precondition* precondition, const unsigned int coast, const unsigned int citizenNeededForAction) : sAction(action), sPrecondition(precondition), sCoast(coast), sCitizenNeededForAction(citizenNeededForAction) {};
-	~Node() {
-		delete sAction;
-		delete sPrecondition;
-	};
+	Node(const Action* action, const unsigned int coast, int citizenNeededForAction) : sAction(action), sCoast(coast), sCitizenNeededForAction(citizenNeededForAction) {};
+	~Node() {};
 };
 
 class GOAPResolver {
 	const Action* cStart;
-	Ressources cRessources;
-	const Ressources* cRessourcesBenefits;
+	Ressources* cRessourcesCopy;
+	const Ressources* cRessourcesAdd;
+	const Ressources* cRessourcesRemove;
 	std::vector<Action*> cActions;
 	std::vector<std::vector<Node>> cNodes;
 	unsigned int maxCitizen = 0;
 
-	void checkPrecondition(const Action* action);
-	Node createNewNode(const Action* action, const Precondition* precondition, const unsigned int coast, const Node* previousNode = nullptr) const;
-	void AddNewNodes(const Precondition* precondition, const unsigned int neededCitizen);
-	void updateWorld();
+	void generateNodeList(const Action* action, const bool isFirstNode);
+	Node createNewNode(const Action* action, const unsigned int coast) const;
 	void clearNodes();
 	void newActionsList(const bool copyFirstOne);
-	void applyEffects(const Action* action, const int quantity);
-	void resolveGOAP();
+	void applyEffects(const Node node);
+	unsigned int findLowerCoast() const;
+	void AstartReversedResolve(const unsigned int idxList);
+	void updateNodeList(Node node, const Precondition* precondition);
+	void implementNewList();
 public:
 
-	GOAPResolver();
-	GOAPResolver(const Action* action, const Ressources* ressourcesBenefits) : cStart(action), cRessourcesBenefits(ressourcesBenefits) {};
-	~GOAPResolver() {};
+	GOAPResolver() {};
+	GOAPResolver(const Action* action, const Ressources* ressourcesAdd, const Ressources* ressourcesremove, std::vector<Action*> actions) : cStart(action), cRessourcesAdd(ressourcesAdd), cRessourcesRemove(ressourcesremove), cActions(actions) {};
+	~GOAPResolver();
 
-	Ressources startResolver(const Ressources ressources);
+	void startResolver(Ressources* ressources);
 };

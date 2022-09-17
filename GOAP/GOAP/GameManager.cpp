@@ -1,49 +1,75 @@
 #include "GameManager.h"
 
-#define NEEDED_FOOD_FOR_CITIZEN 100
-#define NEEDED_WOOD_FOR_HOUSE 50
-#define NEEDED_IRON_FOR_HOUSE 25
+#include <iostream>
+
+#include "Ressources.h"
+
+#define DEFAULT_RESSOURCE_FOOD 100
+#define DEFAULT_RESSOURCE_IRON 10
+#define DEFAULT_RESSOURCE_WOOD 25
+#define DEFAULT_RESSOURCE_CITIZEN 10
+#define DEFAULT_RESSOURCE_HOME 5
+#define DEFAULT_RESSOURCE_SPACE 0
+
+#define ADD_RESSOURCE_FOOD 10
+#define ADD_RESSOURCE_IRON 4
+#define ADD_RESSOURCE_WOOD 5
+#define ADD_RESSOURCE_CITIZEN 1
+#define ADD_RESSOURCE_HOME 1
+#define ADD_RESSOURCE_SPACE 2
+
+#define REMOVE_RESSOURCE_FOOD -100
+#define REMOVE_RESSOURCE_IRON -25
+#define REMOVE_RESSOURCE_WOOD -50
+#define REMOVE_RESSOURCE_CITIZEN -1
+#define REMOVE_RESSOURCE_HOME -1
+#define REMOVE_RESSOURCE_SPACE -1
 
 GameManager::GameManager() {
-	cRessourcesAvailable = new Ressources();
-	cRessourcesBenefits = new Ressources();
+	cRessources = new Ressources();
+	cRessourcesAdd = new Ressources();
+	cRessourcesRemove = new Ressources();
 
-	cRessourcesAvailable->addRessource(RessourceType::WOOD, 0);
-	cRessourcesAvailable->addRessource(RessourceType::IRON, 0);
-	cRessourcesAvailable->addRessource(RessourceType::FOOD, 100);
-	cRessourcesAvailable->addRessource(RessourceType::CITIZEN, 10);
-	cRessourcesAvailable->addRessource(RessourceType::HOUSE, 5);
+	cRessources->addRessource(RessourceType::WOOD, DEFAULT_RESSOURCE_WOOD);
+	cRessources->addRessource(RessourceType::IRON, DEFAULT_RESSOURCE_IRON);
+	cRessources->addRessource(RessourceType::FOOD, DEFAULT_RESSOURCE_FOOD);
+	cRessources->addRessource(RessourceType::CITIZEN, DEFAULT_RESSOURCE_CITIZEN);
+	cRessources->addRessource(RessourceType::HOUSE, DEFAULT_RESSOURCE_HOME);
+	cRessources->addRessource(RessourceType::SPACE, DEFAULT_RESSOURCE_SPACE);
 
-	cRessourcesBenefits->addRessource(RessourceType::WOOD, 10);
-	cRessourcesBenefits->addRessource(RessourceType::IRON, 5);
-	cRessourcesBenefits->addRessource(RessourceType::FOOD, 10);
-	cRessourcesBenefits->addRessource(RessourceType::CITIZEN, 1);
-	cRessourcesBenefits->addRessource(RessourceType::HOUSE, 1);
+	cRessourcesAdd->addRessource(RessourceType::WOOD, ADD_RESSOURCE_WOOD);
+	cRessourcesAdd->addRessource(RessourceType::IRON, ADD_RESSOURCE_IRON);
+	cRessourcesAdd->addRessource(RessourceType::FOOD, ADD_RESSOURCE_FOOD);
+	cRessourcesAdd->addRessource(RessourceType::CITIZEN, ADD_RESSOURCE_CITIZEN);
+	cRessourcesAdd->addRessource(RessourceType::HOUSE, ADD_RESSOURCE_HOME);
+	cRessourcesAdd->addRessource(RessourceType::SPACE, ADD_RESSOURCE_SPACE);
 
-	cFoodCoastCitizenPerTurn = 10;
-	cCitizenWinCondition = 100;
-	cCitizenLoseCondition = 1;
+	cRessourcesRemove->addRessource(RessourceType::WOOD, REMOVE_RESSOURCE_WOOD);
+	cRessourcesRemove->addRessource(RessourceType::IRON, REMOVE_RESSOURCE_IRON);
+	cRessourcesRemove->addRessource(RessourceType::FOOD, REMOVE_RESSOURCE_FOOD);
+	cRessourcesRemove->addRessource(RessourceType::CITIZEN, REMOVE_RESSOURCE_CITIZEN);
+	cRessourcesRemove->addRessource(RessourceType::HOUSE, REMOVE_RESSOURCE_HOME);
+	cRessourcesRemove->addRessource(RessourceType::SPACE, REMOVE_RESSOURCE_SPACE);
 
 	initAssets();
 
-	GOAPResolver solver = GOAPResolver(cActionsGC[cActionsGC.size() - 1], cRessourcesBenefits);
+	solver = GOAPResolver(cActionsGC[cActionsGC.size() - 1], cRessourcesAdd, cRessourcesRemove, cActionsGC);
 }
 
 void GameManager::initAssets() {
-
-	Precondition* preconditionFreeCitizen = new Precondition_Ressources_Is_Enough(ComparatorType::HIGHER_THAN_OR_EQUAL, 1, RessourceType::CITIZEN, FlagType::DECREASE_FREE_CITIZEN);
+	Precondition* preconditionFreeCitizen = new Precondition_Ressources_Is_Enough(ComparatorType::HIGHER_THAN_OR_EQUAL, REMOVE_RESSOURCE_CITIZEN, RessourceType::CITIZEN, FlagType::END_SEARCH);
 	cPreconditionsGC.push_back(preconditionFreeCitizen);
-	Precondition* preconditionEnoughFood = new Precondition_Ressources_Is_Enough(ComparatorType::HIGHER_THAN_OR_EQUAL, NEEDED_FOOD_FOR_CITIZEN, RessourceType::FOOD, FlagType::INCREASE_FOOD);
+	Precondition* preconditionEnoughFood = new Precondition_Ressources_Is_Enough(ComparatorType::HIGHER_THAN_OR_EQUAL, REMOVE_RESSOURCE_FOOD, RessourceType::FOOD, FlagType::INCREASE_FOOD);
 	cPreconditionsGC.push_back(preconditionEnoughFood);
-	Precondition* preconditionEnoughWood = new Precondition_Ressources_Is_Enough(ComparatorType::HIGHER_THAN_OR_EQUAL, NEEDED_WOOD_FOR_HOUSE, RessourceType::WOOD, FlagType::INCREASE_WOOD);
+	Precondition* preconditionEnoughWood = new Precondition_Ressources_Is_Enough(ComparatorType::HIGHER_THAN_OR_EQUAL, REMOVE_RESSOURCE_WOOD, RessourceType::WOOD, FlagType::INCREASE_WOOD);
 	cPreconditionsGC.push_back(preconditionEnoughWood);
-	Precondition* preconditionEnoughIron = new Precondition_Ressources_Is_Enough(ComparatorType::HIGHER_THAN_OR_EQUAL, NEEDED_IRON_FOR_HOUSE, RessourceType::IRON, FlagType::INCREASE_IRON);
+	Precondition* preconditionEnoughIron = new Precondition_Ressources_Is_Enough(ComparatorType::HIGHER_THAN_OR_EQUAL, REMOVE_RESSOURCE_IRON, RessourceType::IRON, FlagType::INCREASE_IRON);
 	cPreconditionsGC.push_back(preconditionEnoughIron);
-	Precondition* preconditionEnoughFreePlace = new Precondition_Ressources_Is_Enough(ComparatorType::HIGHER_THAN_OR_EQUAL, 1, RessourceType::CITIZEN, FlagType::INCREASE_HOUSE);
+	Precondition* preconditionEnoughFreePlace = new Precondition_Ressources_Is_Enough(ComparatorType::HIGHER_THAN_OR_EQUAL, REMOVE_RESSOURCE_SPACE, RessourceType::SPACE, FlagType::INCREASE_HOUSE);
 	cPreconditionsGC.push_back(preconditionEnoughFreePlace);
 
-	Effect* effectRemoveFreeCitizen = new Effect_Alter_Ressources(RessourceType::CITIZEN, OperandType::MINUS, FlagType::DECREASE_FREE_CITIZEN);
-	cEffectsGC.push_back(effectRemoveFreeCitizen);
+	Effect* effectRemoveCitizen = new Effect_Alter_Ressources(RessourceType::CITIZEN, OperandType::MINUS, FlagType::DECREASE_CITIZEN);
+	cEffectsGC.push_back(effectRemoveCitizen);
 	Effect* effectRemoveFood = new Effect_Alter_Ressources(RessourceType::FOOD, OperandType::MINUS, FlagType::DECREASE_FOOD);
 	cEffectsGC.push_back(effectRemoveFood);
 	Effect* effectAddFood = new Effect_Alter_Ressources(RessourceType::FOOD, OperandType::PLUS, FlagType::INCREASE_FOOD);
@@ -60,66 +86,75 @@ void GameManager::initAssets() {
 	cEffectsGC.push_back(effectAddCitizen);
 	Effect* effectAddHouse = new Effect_Alter_Ressources(RessourceType::HOUSE, OperandType::PLUS, FlagType::INCREASE_HOUSE);
 	cEffectsGC.push_back(effectAddHouse);
+	Effect* effectAddSpace = new Effect_Alter_Ressources(RessourceType::SPACE, OperandType::PLUS, FlagType::INCREASE_SPACE);
+	cEffectsGC.push_back(effectAddSpace);
+	Effect* effectRemoveSpace = new Effect_Alter_Ressources(RessourceType::SPACE, OperandType::MINUS, FlagType::DECREASE_SPACE);
+	cEffectsGC.push_back(effectRemoveSpace);
 
-	Action* actionFarmFood = new Action("Envoyez des villageois récolter de la nourriture" ,3);
+	Action* actionFarmFood = new Action("Send citizen to farm some food" ,3);
 	actionFarmFood->sPreconditions.push_back(preconditionFreeCitizen);
-	actionFarmFood->sEffects.push_back(effectRemoveFreeCitizen);
+	actionFarmFood->sEffects.push_back(effectRemoveCitizen);
 	actionFarmFood->sEffects.push_back(effectAddFood);
+	cActionsGC.push_back(actionFarmFood);
 
-	Action* actionFarmWood = new Action("Envoyez des villageois couper du bois", 5);
+	Action* actionFarmWood = new Action("Send citizen to farm some wood", 5);
 	actionFarmWood->sPreconditions.push_back(preconditionFreeCitizen);
-	actionFarmWood->sEffects.push_back(effectRemoveFreeCitizen);
+	actionFarmWood->sEffects.push_back(effectRemoveCitizen);
 	actionFarmWood->sEffects.push_back(effectAddWood);
 	cActionsGC.push_back(actionFarmWood);
 
-	Action* actionFarmIron = new Action("Envoyez des villageois récolter du fer", 7);
-	actionFarmWood->sPreconditions.push_back(preconditionFreeCitizen);
-	actionFarmWood->sEffects.push_back(effectRemoveFreeCitizen);
-	actionFarmWood->sEffects.push_back(effectAddIron);
+	Action* actionFarmIron = new Action("Send citizen to farm some iron", 7);
+	actionFarmIron->sPreconditions.push_back(preconditionFreeCitizen);
+	actionFarmIron->sEffects.push_back(effectRemoveCitizen);
+	actionFarmIron->sEffects.push_back(effectAddIron);
 	cActionsGC.push_back(actionFarmIron);
 
-	Action* actionBuildHouse = new Action("Construire des maison", 10);
-	actionFarmWood->sPreconditions.push_back(preconditionEnoughWood);
-	actionFarmWood->sPreconditions.push_back(preconditionEnoughIron);
-	actionFarmWood->sEffects.push_back(effectAddHouse);
-	actionFarmWood->sEffects.push_back(effectRemoveIron);
-	actionFarmWood->sEffects.push_back(effectRemoveWood);
+	Action* actionBuildHouse = new Action("Build a house", 10);
+	actionBuildHouse->sPreconditions.push_back(preconditionEnoughWood);
+	actionBuildHouse->sPreconditions.push_back(preconditionEnoughIron);
+	actionBuildHouse->sEffects.push_back(effectAddHouse);
+	actionBuildHouse->sEffects.push_back(effectRemoveIron);
+	actionBuildHouse->sEffects.push_back(effectRemoveWood);
+	actionBuildHouse->sEffects.push_back(effectAddSpace);
 	cActionsGC.push_back(actionBuildHouse);
 
-	Action* actionNewCitizen = new Action("Ajoute un citoyen", 1);
-	actionFarmWood->sPreconditions.push_back(preconditionEnoughFreePlace);
-	actionFarmWood->sPreconditions.push_back(preconditionEnoughFood);
-	actionFarmWood->sEffects.push_back(effectAddCitizen);
+	Action* actionNewCitizen = new Action("create new citizen", 1);
+	actionNewCitizen->sPreconditions.push_back(preconditionEnoughFreePlace);
+	actionNewCitizen->sPreconditions.push_back(preconditionEnoughFood);
+	actionNewCitizen->sEffects.push_back(effectAddCitizen);
+	actionNewCitizen->sEffects.push_back(effectRemoveFood);
+	actionNewCitizen->sEffects.push_back(effectRemoveSpace);
 	cActionsGC.push_back(actionNewCitizen);
 }
 
 GameManager::~GameManager() {
-
-	for (auto it = cPreconditionsGC.begin(); it != cPreconditionsGC.end(); it++) {
-		delete& it;
+	for (const Precondition* precondition : cPreconditionsGC) {
+		delete precondition;
 	}
 
-	for (auto it = cEffectsGC.begin(); it != cEffectsGC.end(); it++) {
-		delete& it;
+	for (const Effect* effect : cEffectsGC) {
+		delete effect;
 	}
 
-	for (auto it = cActionsGC.begin(); it != cActionsGC.end(); it++) {
-		delete& it;
+	for (const Action* action : cActionsGC) {
+		delete action;
 	}
 
-	delete cRessourcesBenefits;
-	delete cRessourcesAvailable;
 
+	delete cRessources;
+	delete cRessourcesAdd;
+	delete cRessourcesRemove;
 }
 
 void GameManager::thick() {
-	
-	// ne copie pas l'état du monde courent, à modifier.
-	*cRessourcesAvailable = solver.startResolver(*cRessourcesAvailable);
+	cCitizenWinCondition = 100;
 
+	int i = 1;
 
-
-	// Permet d'enlever de la nourriture par tour, à conserver pour peut-être rajouter plus tard
-	//cRessourcesAvailable.removeUptakeFoodPerTurn(cFoodCoastCitizenPerTurn);
-
+	while ((unsigned int) cRessources->getRessource(RessourceType::CITIZEN) <= cCitizenWinCondition)
+	{
+		std::cout << "tour : " << i << std::endl;
+		solver.startResolver(cRessources);
+		i++;
+	}
 }

@@ -5,7 +5,7 @@
 Precondition_Ressources_Is_Enough::Precondition_Ressources_Is_Enough(const ComparatorType& comparatorType, const unsigned int& valueComparator, const RessourceType& ressourceType, const FlagType& flag) 
 {
 	cComparator = comparatorType;
-	cValueComparator = valueComparator;
+	cValue = valueComparator;
 	cRessourceType = ressourceType;
 	cFlag = flag;
 }
@@ -16,15 +16,15 @@ bool const Precondition_Ressources_Is_Enough::isTrue(const unsigned int& current
 	switch (cComparator)
 	{
 	case ComparatorType::HIGHER_THAN:
-		return currentValue > cValueComparator;
+		return currentValue > cValue;
 	case ComparatorType::HIGHER_THAN_OR_EQUAL:
-		return currentValue >= cValueComparator;
+		return currentValue >= cValue;
 	case ComparatorType::EQUAL:
-		return currentValue == cValueComparator;
+		return currentValue == cValue;
 	case ComparatorType::LOWER_THAN:
-		return currentValue < cValueComparator;
+		return currentValue < cValue;
 	case ComparatorType::LOWER_THAN_OR_EQUAL:
-		return currentValue <= cValueComparator;
+		return currentValue <= cValue;
 	default:
 		assert(("error happened at Precondition_Ressources_Is_Enough::isTrue switch" && true));
 		break;
@@ -32,17 +32,18 @@ bool const Precondition_Ressources_Is_Enough::isTrue(const unsigned int& current
 
 }
 
-const RessourceType Precondition::getRessourceType() const 
-{
+const RessourceType Precondition::getRessourceType() const {
 	return cRessourceType;
 }
 
-int Precondition::citizenNeededForMissingRessources(const Ressources* ressourcesBenefit, const unsigned int currentRessource) const
-{
-	unsigned int missingValue = cValueComparator - currentRessource;
-	unsigned int citizenNeeded = missingValue / ressourcesBenefit->getRessource(cRessourceType);
+int Precondition::citizenNeededForMissingRessources(const Ressources* ressourcesAdd, const unsigned int currentRessource) const {
+	
+	unsigned int missingValue = cValue - currentRessource;
+	unsigned int ressourcesMadeByOneCitizen = ressourcesAdd->getRessource(cRessourceType);
 
-	if (missingValue % ressourcesBenefit->getRessource(cRessourceType) != 0) {
+	unsigned int citizenNeeded = missingValue / ressourcesMadeByOneCitizen;
+
+	if (missingValue % ressourcesMadeByOneCitizen > 0) {
 		citizenNeeded += 1;
 	}
 

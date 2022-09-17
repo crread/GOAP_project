@@ -2,159 +2,168 @@
 
 #include <vector>
 #include <assert.h>
+#include <iostream>
 
 #include "Action.h"
 #include "Precondition.h"
 #include "EnumFlagType.h"
 
-Ressources GOAPResolver::startResolver(const Ressources ressources) 
-{
-	cRessources = ressources;
-	maxCitizen = cRessources.getRessource(RessourceType::CITIZEN);
-
-	while (cRessources.getRessource(RessourceType::CITIZEN) > 0) {
-		assert(("while loop should have stopped" && cRessources.getRessource(RessourceType::CITIZEN) <= 0));
-		clearNodes();
-		newActionsList(false);
-		checkPrecondition(cStart);
-		resolveGOAP();
-	}
-
-	cRessources.addRessource(RessourceType::CITIZEN, maxCitizen);
-	return cRessources;
+GOAPResolver::~GOAPResolver() {
 }
 
-void GOAPResolver::resolveGOAP()
+void GOAPResolver::startResolver(Ressources* ressources) {
+	cRessourcesCopy = ressources;
+	maxCitizen = cRessourcesCopy->getRessource(RessourceType::CITIZEN);
+
+	while (cRessourcesCopy->getRessource(RessourceType::CITIZEN) > 0 && cRessourcesCopy->getRessource(RessourceType::CITIZEN) < 100) {
+		clearNodes();
+		newActionsList(false);
+		Node newNode = createNewNode(cStart, 0);
+		updateNodeList(newNode, nullptr);
+		generateNodeList(cStart, true);
+		const unsigned int idxListWithLowerCoast = findLowerCoast();
+		AstartReversedResolve(idxListWithLowerCoast);
+		std::cout << *cRessourcesCopy << std::endl;
+	}
+
+	cRessourcesCopy->addRessource(RessourceType::CITIZEN, maxCitizen);
+}
+
+void GOAPResolver::AstartReversedResolve(const unsigned int idxList)
 {
-	unsigned int lowerCoast = cNodes[0][cNodes[0].size() - 1].sCoast;
-	unsigned int idxListNodeLowerCoast = 0;
-
-	for (unsigned int i = 1; i < cNodes.size(); i++)
+	for (int i = cNodes[idxList].size() - 1; i >= 0; i--)
 	{
-		unsigned int coastListNode = cNodes[i][cNodes[i].size() - 1].sCoast;
+		if (cRessourcesCopy->getRessource(RessourceType::CITIZEN) < 0) {
+			return;
+		}
+		applyEffects(cNodes[idxList][i]);
+	}
+}
 
-		if (lowerCoast > coastListNode)
-		{
-			lowerCoast = coastListNode;
-			idxListNodeLowerCoast = i;
+unsigned int GOAPResolver::findLowerCoast() const
+{
+	unsigned int idxLowerCoast = cNodes.size() - 1;
+
+	for (unsigned int i = 0; i < cNodes.size() - 1; i++) 
+	{
+		if (cNodes[idxLowerCoast][cNodes[0].size() - 1].sCoast > cNodes[i][cNodes[0].size() - 1].sCoast) {
+			idxLowerCoast = cNodes[i][cNodes[0].size() - 1].sCoast;
 		}
 	}
 
-	std::vector<Node> listSelected = cNodes[idxListNodeLowerCoast];
+	return idxLowerCoast;
+}
 
-	for (unsigned int i = listSelected.size() - 1; i >= 0; i--)
+void GOAPResolver::generateNodeList(const Action* currentAction, const bool isFirstNode) {
+	for (const Precondition* precondition : currentAction->sPreconditions)
 	{
-		Node currentNode = listSelected[i];
+		int ressourceQuantity = cRessourcesCopy->getRessource(precondition->getRessourceType());
+
+		if (!precondition->isTrue(ressourceQuantity) && precondition->cFlag != FlagType::END_SEARCH) {
+
+			if (!isFirstNode)
+			{
+				int neededCitizen = precondition->citizenNeededForMissingRessources(cRessourcesAdd, ressourceQuantity);
+				Node newNode = createNewNode(currentAction, neededCitizen);
+				updateNodeList(newNode, precondition);
+			}
+
+			for (const Action* action : cActions)
+			{
+				for (const Effect* effect : action->sEffects)
+				{
+					if (effect->cFlag == precondition->cFlag)
+					{
+						generateNodeList(action, false);
+					}
+				}
+			}
+		}
 	}
+}
+
+void GOAPResolver::updateNodeList(Node node, const Precondition* precondition) {
+
+	if (cNodes.size() == 1) {
+		if (cNodes[0].size() > 1) {
+			node.sCoast += cNodes[0][cNodes[0].size() - 1].sCoast;
+		}
+		cNodes[0].push_back(node);
+	}
+	else {
+		for (unsigned int i = 0; i < cNodes.size(); i++)
+		{
+			Node lastNodeImplemented = cNodes[i][cNodes[i].size() - 1];
+
+			if (precondition != nullptr)
+			{
+				for (const Effect* effect : lastNodeImplemented.sAction->sEffects)
+				{
+					if (effect->cFlag == precondition->cFlag)
+					{
+						node.sCoast += lastNodeImplemented.sCoast;
+						cNodes[i].push_back(node);
+						break;
+					}
+				}
+			}
+			else {
+				std::cout << "precondition is nullptr" << std::endl;
+				cNodes[i].push_back(node);
+			}
+		}
+	}
+}
+
+Node GOAPResolver::createNewNode(const Action* action, const unsigned int citizenNeeded) const
+{
+	return Node(action, action->sCoast, citizenNeeded);
 }
 
 void GOAPResolver::newActionsList(const bool copyFirstOne)
 {
 	cNodes.push_back(std::vector<Node>());
 
-	if (copyFirstOne) 
+	if (copyFirstOne)
 	{
-		for (unsigned int i = 0; i < cNodes[0].size() - 2; i++) 
+		for (unsigned int i = 0; i < cNodes[0].size() - 1; i++) 
 		{
 			cNodes[cNodes.size() - 1].push_back(cNodes[0][i]);
 		}
 	}
 }
 
-void GOAPResolver::clearNodes() 
+void GOAPResolver::applyEffects(const Node node)
 {
-	for (auto listAction : cNodes) 
+	for (Effect* effect : node.sAction->sEffects)
+	{
+		unsigned int citizensNeeded = node.sCitizenNeededForAction;
+
+		if (effect->cFlag == FlagType::INCREASE_HOUSE ||
+			effect->cFlag == FlagType::INCREASE_SPACE ||
+			effect->cFlag == FlagType::DECREASE_SPACE ||
+			effect->cFlag == FlagType::INCREASE_CITIZEN)
+		{
+			citizensNeeded = 0;
+		}
+		else if (citizensNeeded > cRessourcesCopy->getRessource(RessourceType::CITIZEN)) {
+			citizensNeeded = cRessourcesCopy->getRessource(RessourceType::CITIZEN);
+		}
+
+		if (effect->cFlag == FlagType::INCREASE_CITIZEN) {
+			maxCitizen += 1;
+		}
+
+		effect->applyEffect(cRessourcesCopy, cRessourcesAdd, cRessourcesRemove, citizensNeeded);
+	}
+}
+
+void GOAPResolver::clearNodes()
+{
+	for (auto listAction : cNodes)
 	{
 		listAction.clear();
 	}
 
 	cNodes.clear();
-}
-
-Node GOAPResolver::createNewNode(const Action* action, const Precondition* precondition, const unsigned int citizenNeeded, const Node* previousNode = nullptr) const
-{
-	if (previousNode != nullptr) {
-		return Node(action, precondition, previousNode->sCoast + action->sCoast, citizenNeeded);
-	}
-	return Node(action, precondition, action->sCoast, citizenNeeded);
-}
-
-void GOAPResolver::updateWorld() 
-{
-	//for () 
-	//{
-
-	//}
-}
-
-void GOAPResolver::AddNewNodes(const Precondition* precondition, const unsigned int neededCitizen)
-{
-	auto listNode = cNodes[0];
-	int idx = 0;
-
-	for (const Action* action : cActions)
-	{
-		for (const Effect* effect : action->sEffects)
-		{
-			if (effect->cFlag == precondition->cFlag)
-			{
-				if (listNode[listNode.size() - 1].sPrecondition->cFlag == precondition->cFlag)
-				{
-					newActionsList(true);
-					idx = cNodes.size() - 1;
-				}
-
-				Node newNode = createNewNode(action, precondition, neededCitizen);
-				cNodes[idx].push_back(newNode);
-				idx = 0;
-				break;
-			}
-		}
-	}
-}
-
-void GOAPResolver::checkPrecondition(const Action* action)
-{
-	for (const Precondition* precondition : action->sPreconditions)
-	{
-		int ressourceQuantity = cRessources.getRessource(precondition->getRessourceType());
-
-		if (precondition->cFlag == FlagType::INCREASE_HOUSE)
-		{
-			ressourceQuantity = cRessources.getPlaceAvailable();
-		}
-
-		if (!precondition->isTrue(ressourceQuantity))
-		{
-			AddNewNodes(precondition, precondition->citizenNeededForMissingRessources(cRessourcesBenefits, ressourceQuantity));
-		}
-	}
-}
-
-void GOAPResolver::applyEffects(const Action* action, const int quantity)
-{
-	for (const Effect* effect : action->sEffects)
-	{
-		int benefitPerAction = cRessourcesBenefits->getRessource(currentNode.sPrecondition->getRessourceType());
-
-		switch (effect->cFlag)
-		{
-		case FlagType::INCREASE_FOOD:
-		case FlagType::INCREASE_WOOD:
-		case FlagType::INCREASE_IRON:
-			cRessources.addRessource(effect->cType, quantity);
-			break;
-		case FlagType::DECREASE_FOOD:
-		case FlagType::DECREASE_WOOD:
-		case FlagType::DECREASE_IRON:
-			cRessources.removeRessource(effect->cType, quantity);
-			break;
-		case FlagType::INCREASE_HOUSE:
-		case FlagType::INCREASE_CITIZEN:
-			cRessources.removeRessource(effect->cType, 1);
-			break;
-		default:
-			break;
-		}
-	}
 }

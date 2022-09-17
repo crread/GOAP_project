@@ -1,12 +1,13 @@
 #pragma once
 
-#include "EnumRessourceType.h"
-
+#include <iostream>
 #include <vector>
+
+#include "EnumRessourceType.h"
 
 class Ressources {
 
-	std::vector<unsigned int> cRessources;
+	std::vector<int> cRessources;
 
 public:
 
@@ -14,8 +15,8 @@ public:
 	~Ressources() {};
 
 	void addRessource(const RessourceType& ressource, const int& quantity);
-	void removeRessource(const RessourceType& ressource, const int& quantity);
+	void updateRessources(const RessourceType ressourceType, const Ressources* ressourceApplication, const int citizenNumber);
 	int getRessource(const RessourceType& ressourceType) const;
-	void removeUptakeFoodPerTurn(const unsigned int& foodUptakePerCitizen);
-	int getPlaceAvailable() const;
+
+	friend std::ostream& operator<<(std::ostream& os, const Ressources& ressources);
 };

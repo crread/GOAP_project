@@ -16,16 +16,12 @@ class GameManager {
 	std::vector<Precondition*> cPreconditionsGC;
 	std::vector<Effect*> cEffectsGC;
 
-	Ressources* cRessourcesAvailable;
-	Ressources* cRessourcesBenefits;
+	Ressources* cRessources;
+	Ressources* cRessourcesAdd;
+	Ressources* cRessourcesRemove;
 	GOAPResolver solver;
 
-	unsigned int cFoodCoastCitizenPerTurn;
-
-	std::vector<int> cBenefitFarm;
-
 	unsigned int cCitizenWinCondition;
-	unsigned int cCitizenLoseCondition;
 
 	void initAssets();
 public:

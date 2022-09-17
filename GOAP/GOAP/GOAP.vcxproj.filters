@@ -30,9 +30,6 @@
     <ClCompile Include="Ressources.cpp">
       <Filter>Fichiers de ressources</Filter>
     </ClCompile>
-    <ClCompile Include="State.cpp">
-      <Filter>Fichiers de ressources</Filter>
-    </ClCompile>
     <ClCompile Include="GOAPResolver.cpp">
       <Filter>Fichiers de ressources</Filter>
     </ClCompile>
@@ -57,9 +54,6 @@
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="Ressources.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="State.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="Action.h">

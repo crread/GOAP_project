@@ -1,17 +1,17 @@
 #pragma once
 
+#include <assert.h>
+
 #include "EnumComparatorType.h"
 #include "EnumRessourceType.h"
 #include "EnumFlagType.h"
-
-#include <assert.h>
 
 class Ressources;
 
 class Precondition {
 protected:
 	ComparatorType cComparator;
-	unsigned int cValueComparator;
+	unsigned int cValue;
 	RessourceType cRessourceType;
 
 public:

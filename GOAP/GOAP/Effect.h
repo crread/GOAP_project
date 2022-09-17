@@ -1,10 +1,13 @@
 #pragma once
 
-#include "EnumRessourceType.h";
-#include "EnumOperandType.h";
+#include <assert.h>
+#include <iostream>
+
+#include "EnumRessourceType.h"
+#include "EnumOperandType.h"
 #include "EnumFlagType.h"
 
-#include <assert.h>
+class Ressources;
 
 class Effect {
 public:
@@ -15,6 +18,8 @@ public:
 	~Effect() {};
 
 	virtual void updateEffect() const {};
+	virtual void applyEffect(Ressources* ressources, const Ressources* ressourcesAdd, const Ressources* ressourcesRemove, const unsigned int citizens) const = 0;
+	friend std::ostream& operator<<(std::ostream& os, const Effect& effect);
 };
 
 class Effect_Alter_Ressources : public Effect {
@@ -27,5 +32,5 @@ public:
 
 	~Effect_Alter_Ressources() {};
 
-	void updateEffect(unsigned int ressource, const unsigned int& quantity) const;
+	void applyEffect(Ressources* ressources, const Ressources* ressourcesAdd, const Ressources* ressourcesRemove, const unsigned int citizens) const override;
 };

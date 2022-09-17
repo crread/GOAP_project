@@ -6,5 +6,6 @@ enum class RessourceType {
 	FOOD,
 	CITIZEN,
 	HOUSE,
+	SPACE,
 	LENGTH,
 };
